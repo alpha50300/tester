@@ -1,5 +1,5 @@
 {
-    "token": "bot_token",
-    "allowed_channel_ids": ["CHANNEL_ID_1", "CHANNEL_ID_2", "CHANNEL_ID_3"],
-    "image2textChannels":["CHANNEL_ID_1", "CHANNEL_ID_2", "CHANNEL_ID_3"]
+  "mute_time":"3h",
+  "mute_message":"لقد تجاوزت قواعد المحادثة , يرجي الإلتزام بالحفاظ علي بيئة تواصل صحية في المجتمع",
+  "allowed_roles":[""]
 }
