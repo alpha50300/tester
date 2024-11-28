@@ -1,73 +1,67 @@
-const { Client, GatewayIntentBits, MessageAttachment } = require('discord.js');
-const { Hercai } = require('hercai');
-const Tesseract = require('tesseract.js');
-const fetch = require('node-fetch');
-const { allowed_channel_ids, token, image2textChannels } = require('./config.json');
-
-const herc = new Hercai();
+const { GatewayIntentBits, Integration, ChannelFlags } = require('discord.js');
+const {
+  Client,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputStyle,
+  TextInputBuilder,ApplicationCommandOptionType
+} = require('discord.js');
+const fs = require('fs');
+const ms = require('ms');
+const { PermissionsBitField } = require('discord.js');
+const config = require('./config.json');
+const rolesallowed = config.allowed_roles
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.MessageContent,
+		GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.DirectMessages
+	],
 });
+require('dotenv').config();
 
-client.once('ready', () => {
-  console.log(`bot is ready! ${client.user.tag}!`);
-  console.log(`Code by Wick Studio`);
-  console.log(`discord.gg/wicks`);
+client.on('ready', async () => {
+  console.log(`Logged in as ${client.user.tag}!`);
 });
+const bannedWords = [];
 
-async function extractTextFromImage(url) {
-  try {
-    const image = await fetch(url).then(res => res.buffer());
-    const textFromImage = await Tesseract.recognize(image, 'eng');
-    return textFromImage.data.text;
-  } catch (error) {
-    return "Error "
-  }
-}
-
-client.on('messageCreate', async message => {
-  if (message.author.bot || !allowed_channel_ids.includes(message.channel.id) && !image2textChannels.includes(message.channel.id)) return;
-
-  let fullContent = message.content;
-
-  if (message.attachments.size > 0 && image2textChannels.includes(message.channel.id)) {
-    const attachment = message.attachments.first();
-    if (attachment.contentType && attachment.contentType.startsWith('image/')) {
-      try {
-        const extractedText = await extractTextFromImage(attachment.url);
-        await message.reply(`Extracted Text: ${extractedText}`);
-      } catch (error) {
-        await message.reply('Sorry, I had trouble reading that image.');
-      }
-    }
+fs.readFile("banned_words.txt", "utf8", (err, data) => {
+  if (err) {
+    console.error("خطأ في قراءة الملف المحظور: " + err);
     return;
   }
-
-  if (message.attachments.size > 0 && allowed_channel_ids.includes(message.channel.id)) {
-    const attachment = message.attachments.first();
-    if (attachment.contentType && attachment.contentType.startsWith('image/')) {
-      try {
-        const textFromImage = await extractTextFromImage(attachment.url);
-        fullContent += ` [Image Content: ${textFromImage}]`;
-      } catch (error) {
-        await message.reply('Sorry, I had trouble reading that image.');
-        return;
-      }
-    }
-  }
-
-  try {
-    const response = await herc.question({ model: "v3-beta", content: fullContent });
-    await message.reply(response.reply);
-  } catch (error) {
-    await message.reply('Sorry, I ran into a bit of trouble trying to respond.');
-  }
+  const lines = data.split("\n").map((line) => line.trim());
+  bannedWords.push(...lines);
 });
 
+client.on("messageCreate", async (message) => {    
+  for (let i = 0; i < bannedWords.length; i++) {
+    if (message.content.includes(bannedWords[i])) {
+      if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator) &&!message.member.roles.cache.some(role => rolesallowed.includes(role.id))
+      ) {
+      let member = message.member;
+      let embed = new EmbedBuilder()
+        .setTitle("**You Are Muted !**")
+        .setDescription(
+          `**You are muted in \`${message.guild.name}\` server for a ${config.mute_time}**\n**For sharing a bad words or links in the chat !**\n**Your message : \`${message.content}\`**`
+        )
+        .setThumbnail(message.guild.iconURL({dynamic: true }));
+      message.delete();
+      await message.channel.send(
+        `${message.member} **${config.mute_message}**`
+      );
+      await member.timeout(ms(config.mute_time), "badward");
+      await message.member.send({ embeds: [embed] });
+      break;
+    }
+  }
+  }
 
+});
 
-client.login(token);
+client.login("TOKEN")
