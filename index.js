@@ -1,3 +1,9 @@
+// Express لتشغيل السيرفر في Render
+const express = require("express");
+const app = express();
+app.get("/", (req, res) => res.send("Bot is running"));
+app.listen(3000, () => console.log("✅ Web server is live"));
+
 const { Client, GatewayIntentBits, MessageAttachment } = require('discord.js');
 const { Hercai } = require('hercai');
 const Tesseract = require('tesseract.js');
